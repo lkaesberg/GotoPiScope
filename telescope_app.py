@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 from tkinter import ttk
 from ttkthemes import ThemedTk
@@ -21,6 +22,10 @@ class App(ThemedTk):
         bg_color = style.lookup("TFrame", "background")  # Get the background color of the theme
 
         self.configure(background=bg_color)
+
+        self.auto_follow = False
+        self.auto_follow_button = ttk.Button(self, text="Start Auto Follow", command=self.toggle_auto_follow)
+        self.auto_follow_button.grid(row=7, column=1, padx=5, pady=5)
 
         self.altitude_label = ttk.Label(self, text="Altitude:")
         self.altitude_label.grid(row=0, column=0, padx=5, pady=5)
@@ -83,6 +88,25 @@ class App(ThemedTk):
     def adjust_position(self, az_change, alt_change):
         # Assuming telescope has a method to adjust position
         self.telescope.adjust_position(az_change, alt_change)
+
+    def toggle_auto_follow(self):
+        self.auto_follow = not self.auto_follow
+        if self.auto_follow:
+            self.auto_follow_button.config(text="Stop Auto Follow")
+            self.auto_follow_thread = threading.Thread(target=self.auto_follow_target)
+            self.auto_follow_thread.start()
+        else:
+            self.auto_follow_button.config(text="Start Auto Follow")
+            # The thread will exit on its next iteration since self.auto_follow is now False
+
+    def auto_follow_target(self):
+        while self.auto_follow:
+            self.fetch_stellarium_data()
+            data = self.get_stellarium_data()
+            altitude = float(data['altitude'])
+            azimuth = float(data['azimuth'])
+            #self.telescope.goto(altitude, azimuth)
+            time.sleep(0.1)  # Adjust this value to control how frequently the telescope updates its position
 
 
 alt_motor = StepperMotor(step_pin=18, dir_pin=23, en_pin=24)
