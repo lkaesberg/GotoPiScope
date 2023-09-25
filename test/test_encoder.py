@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 import rotary_encoder
 import pigpio
 from time import sleep
