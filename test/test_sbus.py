@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 import read_sbus_from_GPIO
 
 SBUS_PIN = 21 #pin where sbus wire is plugged in, BCM numbering
