@@ -3,11 +3,11 @@ import pigpio
 from time import sleep
 
 # Define the GPIO pin numbers for your encoders.
-channel_A1 = 17  # Using GPIO17 for encoder 1
-channel_B1 = 27  # Using GPIO27 for encoder 1
+channel_A1 = 11  # Using GPIO17 for encoder 1
+channel_B1 = 7  # Using GPIO27 for encoder 1
 
-channel_A2 = 23  # Using GPIO23 for encoder 2
-channel_B2 = 24  # Using GPIO24 for encoder 2
+channel_A2 = 15  # Using GPIO23 for encoder 2
+channel_B2 = 14  # Using GPIO24 for encoder 2
 
 position1 = 0  # Current position of encoder 1
 position2 = 0  # Current position of encoder 2
