@@ -4,17 +4,23 @@ from tkinter import ttk
 from ttkthemes import ThemedTk
 import requests
 import threading
+import read_sbus_from_GPIO
+from remote_controller import remote_control
 
 from stepper_motor import StepperMotor
+from encoder_motor import EncoderMotor
 from telescope import Telescope
+from focus_controller import FocusController
 
 
 class App(ThemedTk):
-    def __init__(self, telescope):
+    def __init__(self, telescope: Telescope, focus_motor: StepperMotor, remote_pin):
         super().__init__()
         self.telescope = telescope
         self.title("Telescope Control")
-        self.geometry("400x400")
+        self.geometry("600x500")
+        self.attributes('-topmost',True)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.set_theme("equilux")  # Set the theme
 
@@ -40,6 +46,15 @@ class App(ThemedTk):
         self.azimuth_var = tk.StringVar()
         self.azimuth_entry = ttk.Entry(self, textvariable=self.azimuth_var)
         self.azimuth_entry.grid(row=1, column=1, padx=5, pady=5)
+        
+        self.error_label = ttk.Label(self, text="")
+        self.error_label.grid(row=6, column=2, columnspan=3, padx=5, pady=5)
+        
+        self.controller_label = ttk.Label(self, text="")
+        self.controller_label.grid(row=7, column=2, columnspan=3, padx=5, pady=5)
+        
+        self.autofollow_label = ttk.Label(self, text="")
+        self.autofollow_label.grid(row=8, column=2, columnspan=3, padx=5, pady=5)
 
         self.goto_button = ttk.Button(self, text="Go To", command=self.goto)
         self.goto_button.grid(row=2, column=1, padx=5, pady=5)
@@ -61,14 +76,38 @@ class App(ThemedTk):
 
         self.info_label = ttk.Label(self, text="")
         self.info_label.grid(row=6, column=0, columnspan=3, padx=5, pady=5)
+        
+        self.telescope_loop = threading.Thread(target=self.telescope.run, args=[self.on_telescope_loop])
+        self.telescope_loop.start()
+        
+        self.focus_controller = FocusController(focus_motor)
+        
+        self.remote = read_sbus_from_GPIO.SbusReader(remote_pin)
+        self.remote.begin_listen()
+        self.remote_loop = threading.Thread(target=remote_control, args=[self.telescope, self.remote, self.focus_controller])
+        self.remote_loop.start()
 
     def goto(self):
         altitude = float(self.altitude_var.get())
         azimuth = float(self.azimuth_var.get())
         self.telescope.goto(altitude, azimuth)
+        
+    def on_telescope_loop(self):
+        error = self.telescope.get_current_error()
+        position = self.telescope.get_current_coordinate()
+        error_text = f"Altitude: {position[0]}°\nAzimuth: {position[1]}°\nAltitude Error: {error[0]}\nAzimuth Error: {error[1]}"
+        self.error_label.config(text=error_text)
+        
+        self.controller_label.config(text=f"Controller connected: {self.remote.is_connected()}")
+        
+        
 
     def update(self):
         threading.Thread(target=self.fetch_stellarium_data).start()
+        data = self.get_stellarium_data()
+        altitude = float(data['altitude'])
+        azimuth = float(data['azimuth'])
+        self.telescope.set_coordinate_offset(altitude, azimuth)
 
     def get_stellarium_data(self, object_name=None):
         url = f'http://localhost:8090/api/objects/info'
@@ -105,14 +144,21 @@ class App(ThemedTk):
             data = self.get_stellarium_data()
             altitude = float(data['altitude'])
             azimuth = float(data['azimuth'])
-            #self.telescope.goto(altitude, azimuth)
+            self.telescope.goto_coordinates(altitude, azimuth)
             time.sleep(0.1)  # Adjust this value to control how frequently the telescope updates its position
+            
+    def on_closing(self):
+        self.telescope.cleanup()
+        self.destroy()
 
-
-alt_motor = StepperMotor(step_pin=18, dir_pin=23, en_pin=24)
-az_motor = StepperMotor(step_pin=19, dir_pin=20, en_pin=21)
-telescope = Telescope(alt_motor, az_motor)
+alt_motor = StepperMotor(step_pin=13, dir_pin=25, en_pin=8)
+az_motor = StepperMotor(step_pin=12, dir_pin=20, en_pin=16)
+focus_motor = StepperMotor(step_pin=18, dir_pin=23, en_pin=24)
+focus_motor.disable()
+alt_encoder_motor = EncoderMotor(alt_motor, channel_A=11, channel_B=7, P = 20)
+az_encoder_motor = EncoderMotor(az_motor, channel_A=15, channel_B=14, P = 20)
+telescope = Telescope(alt_encoder_motor, az_encoder_motor, alt_steps_per_degree=51.2820512821, az_steps_per_degree=66.6666666667)
 
 # Start the GUI
-app = App(telescope)
+app = App(telescope, focus_motor, 21)
 app.mainloop()

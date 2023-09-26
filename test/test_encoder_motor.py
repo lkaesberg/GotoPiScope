@@ -1,5 +1,5 @@
 import sys
-sys.path.append('..')
+sys.path.append('.')
 
 from encoder_motor import EncoderMotor
 from stepper_motor import StepperMotor

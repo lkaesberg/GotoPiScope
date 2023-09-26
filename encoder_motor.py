@@ -19,19 +19,21 @@ class EncoderMotor:
         self.decoder = rotary_encoder.decoder(self.pi, channel_A, channel_B, self.encoder_callback)
 
     def encoder_callback(self, way):
-        self.current_position += way
+        self.current_position -= way
 
     def set_target_position(self, position):
         self.target_position = position
+        
+    def get_current_error(self):
+        return self.target_position - self.current_position
 
     def control_loop(self):
         error = (self.target_position - self.current_position) * self.P
-        print(error)
         if error > 0:
-            self.motor.set_direction(1)
+            self.motor.set_direction(0)
             self.motor_speed = abs(error)  # Simplified speed control for demonstration
         elif error < 0:
-            self.motor.set_direction(0)
+            self.motor.set_direction(1)
             self.motor_speed = abs(error)  # Simplified speed control for demonstration
         else:
             self.motor_speed = 0  # Stop the motor if the target position is reached
