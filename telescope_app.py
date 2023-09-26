@@ -62,16 +62,16 @@ class App(ThemedTk):
         self.sync_button = ttk.Button(self, text="Sync with Stellarium", command=self.update)
         self.sync_button.grid(row=4, column=1, padx=5, pady=5)
 
-        self.up_button = ttk.Button(self, text="Up", command=lambda: self.adjust_position(0, 1))
+        self.up_button = ttk.Button(self, text="Up", command=lambda: self.adjust_position(-1, 0))
         self.up_button.grid(row=3, column=1, padx=5, pady=5)
 
-        self.down_button = ttk.Button(self, text="Down", command=lambda: self.adjust_position(0, -1))
+        self.down_button = ttk.Button(self, text="Down", command=lambda: self.adjust_position(1, 0))
         self.down_button.grid(row=5, column=1, padx=5, pady=5)
 
-        self.left_button = ttk.Button(self, text="Left", command=lambda: self.adjust_position(-1, 0))
+        self.left_button = ttk.Button(self, text="Left", command=lambda: self.adjust_position(0, 1))
         self.left_button.grid(row=4, column=0, padx=5, pady=5)
 
-        self.right_button = ttk.Button(self, text="Right", command=lambda: self.adjust_position(1, 0))
+        self.right_button = ttk.Button(self, text="Right", command=lambda: self.adjust_position(0, -1))
         self.right_button.grid(row=4, column=2, padx=5, pady=5)
 
         self.info_label = ttk.Label(self, text="")
@@ -90,7 +90,7 @@ class App(ThemedTk):
     def goto(self):
         altitude = float(self.altitude_var.get())
         azimuth = float(self.azimuth_var.get())
-        self.telescope.goto(altitude, azimuth)
+        self.telescope.goto_coordinates(altitude, azimuth)
         
     def on_telescope_loop(self):
         error = self.telescope.get_current_error()
@@ -124,9 +124,9 @@ class App(ThemedTk):
         info_text = f"Name: {data['localized-name']}\nAltitude: {data['altitude']}\nAzimuth: {data['azimuth']}"
         self.info_label.config(text=info_text)
 
-    def adjust_position(self, az_change, alt_change):
+    def adjust_position(self, alt_change, az_change):
         # Assuming telescope has a method to adjust position
-        self.telescope.adjust_position(az_change, alt_change)
+        self.telescope.adjust_position(alt_change, az_change)
 
     def toggle_auto_follow(self):
         self.auto_follow = not self.auto_follow
