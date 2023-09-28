@@ -21,6 +21,8 @@ class App(ThemedTk):
         self.geometry("600x500")
         self.attributes('-topmost',True)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        self.target = None
 
         self.set_theme("equilux")  # Set the theme
 
@@ -29,23 +31,24 @@ class App(ThemedTk):
 
         self.configure(background=bg_color)
 
-        self.auto_follow = False
-        self.auto_follow_button = ttk.Button(self, text="Start Auto Follow", command=self.toggle_auto_follow)
-        self.auto_follow_button.grid(row=7, column=1, padx=5, pady=5)
-
-        self.altitude_label = ttk.Label(self, text="Altitude:")
+        self.goto_frame = ttk.Frame(self)
+        self.goto_frame.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
+        self.altitude_label = ttk.Label(self.goto_frame, text="Altitude:")
         self.altitude_label.grid(row=0, column=0, padx=5, pady=5)
 
         self.altitude_var = tk.StringVar()
-        self.altitude_entry = ttk.Entry(self, textvariable=self.altitude_var)
+        self.altitude_entry = ttk.Entry(self.goto_frame, textvariable=self.altitude_var)
         self.altitude_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        self.azimuth_label = ttk.Label(self, text="Azimuth:")
+        self.azimuth_label = ttk.Label(self.goto_frame, text="Azimuth:")
         self.azimuth_label.grid(row=1, column=0, padx=5, pady=5)
 
         self.azimuth_var = tk.StringVar()
-        self.azimuth_entry = ttk.Entry(self, textvariable=self.azimuth_var)
+        self.azimuth_entry = ttk.Entry(self.goto_frame, textvariable=self.azimuth_var)
         self.azimuth_entry.grid(row=1, column=1, padx=5, pady=5)
+        
+        self.goto_button = ttk.Button(self.goto_frame, text="Go To", command=self.goto)
+        self.goto_button.grid(row=2, column=1, padx=5, pady=5)
         
         self.error_label = ttk.Label(self, text="")
         self.error_label.grid(row=6, column=2, columnspan=3, padx=5, pady=5)
@@ -53,29 +56,39 @@ class App(ThemedTk):
         self.controller_label = ttk.Label(self, text="")
         self.controller_label.grid(row=7, column=2, columnspan=3, padx=5, pady=5)
         
-        self.autofollow_label = ttk.Label(self, text="")
-        self.autofollow_label.grid(row=8, column=2, columnspan=3, padx=5, pady=5)
-
-        self.goto_button = ttk.Button(self, text="Go To", command=self.goto)
-        self.goto_button.grid(row=2, column=1, padx=5, pady=5)
+        self.auto_frame = ttk.Frame(self)
+        self.auto_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=10)
+        
+        self.auto_follow = False
+        self.auto_follow_button = ttk.Button(self.auto_frame, text="Start Auto Follow", command=self.toggle_auto_follow)
+        self.auto_follow_button.grid(row=0, column=0, padx=5, pady=5)
+        
+        self.autofollow_label = ttk.Label(self.auto_frame, text="Target\nNot set!")
+        self.autofollow_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5)
+        
+        self.target_button = ttk.Button(self.auto_frame, text="Set Target", command=self.set_target)
+        self.target_button.grid(row=1, column=0, padx=5, pady=5)
 
         self.sync_button = ttk.Button(self, text="Sync with Stellarium", command=self.update)
-        self.sync_button.grid(row=4, column=1, padx=5, pady=5)
+        self.sync_button.grid(row=4, column=2, padx=5, pady=5)
 
-        self.up_button = ttk.Button(self, text="Up", command=lambda: self.adjust_position(-1, 0))
-        self.up_button.grid(row=3, column=1, padx=5, pady=5)
+        # Control Buttons
+        self.control_frame = ttk.Frame(self)
+        self.control_frame.grid(row=0, column=2, columnspan=2, padx=10, pady=10)
 
-        self.down_button = ttk.Button(self, text="Down", command=lambda: self.adjust_position(1, 0))
-        self.down_button.grid(row=5, column=1, padx=5, pady=5)
+        button_size = 3  # Adjust this value to change the size of the buttons
 
-        self.left_button = ttk.Button(self, text="Left", command=lambda: self.adjust_position(0, 1))
-        self.left_button.grid(row=4, column=0, padx=5, pady=5)
+        self.up_button = ttk.Button(self.control_frame, text="↑", width=button_size, command=lambda: self.adjust_position(-1, 0))
+        self.up_button.grid(row=0, column=1, padx=5, pady=5)
 
-        self.right_button = ttk.Button(self, text="Right", command=lambda: self.adjust_position(0, -1))
-        self.right_button.grid(row=4, column=2, padx=5, pady=5)
+        self.down_button = ttk.Button(self.control_frame, text="↓", width=button_size, command=lambda: self.adjust_position(1, 0))
+        self.down_button.grid(row=2, column=1, padx=5, pady=5)
 
-        self.info_label = ttk.Label(self, text="")
-        self.info_label.grid(row=6, column=0, columnspan=3, padx=5, pady=5)
+        self.left_button = ttk.Button(self.control_frame, text="←", width=button_size, command=lambda: self.adjust_position(0, 1))
+        self.left_button.grid(row=1, column=0, padx=5, pady=5)
+
+        self.right_button = ttk.Button(self.control_frame, text="→", width=button_size, command=lambda: self.adjust_position(0, -1))
+        self.right_button.grid(row=1, column=2, padx=5, pady=5)
         
         self.telescope_loop = threading.Thread(target=self.telescope.run, args=[self.on_telescope_loop])
         self.telescope_loop.start()
@@ -92,10 +105,20 @@ class App(ThemedTk):
         azimuth = float(self.azimuth_var.get())
         self.telescope.goto_coordinates(altitude, azimuth)
         
+    def set_target(self):
+        try:
+            data = self.get_stellarium_data()
+            self.autofollow_label.config(text="Target\nNot set!")
+        except:
+            self.target = None
+            return
+        self.target = data["name"]
+        self.autofollow_label.config(text=f"Target\nName: {data['localized-name']}\nType: {data['type']}")
+        
     def on_telescope_loop(self):
         error = self.telescope.get_current_error()
         position = self.telescope.get_current_coordinate()
-        error_text = f"Altitude: {position[0]}°\nAzimuth: {position[1]}°\nAltitude Error: {error[0]}\nAzimuth Error: {error[1]}"
+        error_text = f"Altitude: {position[0]:.2f}°\nAzimuth: {position[1]:.2f}°\nAltitude Error: {error[0]}\nAzimuth Error: {error[1]}"
         self.error_label.config(text=error_text)
         
         self.controller_label.config(text=f"Controller connected: {self.remote.is_connected()}")
@@ -103,7 +126,6 @@ class App(ThemedTk):
         
 
     def update(self):
-        threading.Thread(target=self.fetch_stellarium_data).start()
         data = self.get_stellarium_data()
         altitude = float(data['altitude'])
         azimuth = float(data['azimuth'])
@@ -119,11 +141,6 @@ class App(ThemedTk):
         response_json = response.json()
         return response_json
 
-    def fetch_stellarium_data(self):
-        data = self.get_stellarium_data()  # Assuming this function fetches data from Stellarium
-        info_text = f"Name: {data['localized-name']}\nAltitude: {data['altitude']}\nAzimuth: {data['azimuth']}"
-        self.info_label.config(text=info_text)
-
     def adjust_position(self, alt_change, az_change):
         # Assuming telescope has a method to adjust position
         self.telescope.adjust_position(alt_change, az_change)
@@ -131,6 +148,8 @@ class App(ThemedTk):
     def toggle_auto_follow(self):
         self.auto_follow = not self.auto_follow
         if self.auto_follow:
+            if not self.target:
+                return
             self.auto_follow_button.config(text="Stop Auto Follow")
             self.auto_follow_thread = threading.Thread(target=self.auto_follow_target)
             self.auto_follow_thread.start()
@@ -139,13 +158,14 @@ class App(ThemedTk):
             # The thread will exit on its next iteration since self.auto_follow is now False
 
     def auto_follow_target(self):
-        while self.auto_follow:
-            self.fetch_stellarium_data()
-            data = self.get_stellarium_data()
+        while self.auto_follow and self.target:
+            data = self.get_stellarium_data(self.target)
             altitude = float(data['altitude'])
             azimuth = float(data['azimuth'])
             self.telescope.goto_coordinates(altitude, azimuth)
             time.sleep(0.1)  # Adjust this value to control how frequently the telescope updates its position
+        else:
+            self.auto_follow_button.config(text="Start Auto Follow")
             
     def on_closing(self):
         self.telescope.cleanup()
