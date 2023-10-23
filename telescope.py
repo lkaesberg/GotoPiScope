@@ -11,28 +11,25 @@ class Telescope:
         
         self.alt_offset_steps_stellarium = 0
         self.az_offset_steps_stellarium = 0
-        self.alt_offset_steps_controller = 0
-        self.az_offset_steps_controller = 0
         self.running = True
         
     def goto_coordinates(self, alt, az):
-        self.alt_motor.set_target_position(int(alt * self.alt_steps_per_degree) + self.alt_offset_steps_stellarium + self.alt_offset_steps_controller)
-        self.az_motor.set_target_position(int(az * self.az_steps_per_degree) + self.az_offset_steps_stellarium + self.az_offset_steps_controller)
+        self.alt_motor.set_target_position(int(alt * self.alt_steps_per_degree) - self.alt_offset_steps_stellarium)
+        self.az_motor.set_target_position(int(az * self.az_steps_per_degree) - self.az_offset_steps_stellarium)
         
     def goto_position(self, alt, az):
-        self.alt_motor.set_target_position(alt + self.alt_offset_steps_stellarium + self.alt_offset_steps_controller)
-        self.az_motor.set_target_position(az + self.az_offset_steps_stellarium + self.az_offset_steps_controller)
+        self.alt_motor.set_target_position(alt - self.alt_offset_steps_stellarium)
+        self.az_motor.set_target_position(az - self.az_offset_steps_stellarium)
     
     def adjust_position(self, alt_steps, az_steps):
-        self.alt_offset_steps_controller -= alt_steps
-        self.az_offset_steps_controller -= az_steps
-        self.goto_position(self.alt_motor.target_position - self.alt_offset_steps_stellarium- self.alt_offset_steps_controller - alt_steps, self.az_motor.target_position - self.az_offset_steps_stellarium - self.az_offset_steps_controller - az_steps)
+        self.alt_motor.current_position += alt_steps
+        self.az_motor.current_position += az_steps
         
     def get_current_positon(self):
-        return self.alt_motor.current_position - self.alt_offset_steps_stellarium - self.alt_offset_steps_controller, self.az_motor.current_position - self.az_offset_steps_stellarium - self.az_offset_steps_controller
+        return self.alt_motor.current_position + self.alt_offset_steps_stellarium, self.az_motor.current_position + self.az_offset_steps_stellarium
         
     def get_target_position(self):
-        return self.alt_motor.target_position - self.alt_offset_steps_stellarium - self.alt_offset_steps_controller, self.az_motor.target_position - self.az_offset_steps_stellarium - self.az_offset_steps_controller
+        return self.alt_motor.target_position + self.alt_offset_steps_stellarium, self.az_motor.target_position + self.az_offset_steps_stellarium
     
     def get_current_coordinate(self):
         position = self.get_current_positon()
@@ -46,10 +43,13 @@ class Telescope:
         return self.alt_motor.get_current_error(), self.az_motor.get_current_error()
         
     def set_coordinate_offset(self, alt_offset, az_offset):
-        self.alt_offset_steps_stellarium = -int(alt_offset * self.alt_steps_per_degree)
-        self.az_offset_steps_stellarium = -int(az_offset * self.az_steps_per_degree)
-        self.goto_position(-self.alt_offset_steps_stellarium -self.alt_offset_steps_controller, -self.az_offset_steps_stellarium - self.az_offset_steps_controller)
-        
+        self.alt_motor.current_position = 0
+        self.alt_motor.target_position = 0
+        self.az_motor.current_position = 0
+        self.az_motor.target_position = 0
+        self.alt_offset_steps_stellarium = int(alt_offset * self.alt_steps_per_degree)
+        self.az_offset_steps_stellarium = int(az_offset * self.az_steps_per_degree)
+                
     def loop(self):
         self.alt_motor.control_loop()
         self.az_motor.control_loop()

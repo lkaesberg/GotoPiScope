@@ -49,8 +49,11 @@ class EncoderMotor:
         derivative = error - self.previous_error
         
         motor_command = (error * self.P) + (self.integral * self.I) + (derivative * self.D)
+        motor_command = min(max(-2000, motor_command), 2000)
+        print(self.current_position)
         
         if motor_command > 0:
+            
             self.motor.set_direction(0)
             self.motor_speed = abs(motor_command)  
         elif motor_command < 0:
