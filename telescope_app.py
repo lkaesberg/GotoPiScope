@@ -179,7 +179,7 @@ alt_steps_per_rotation = 2400 * (100/13)
 az_steps_per_rotation = 2400 * (400/40)
 alt_encoder_motor = EncoderMotor(alt_motor, channel_A=11, channel_B=7, P = 100,I=0,D = 1, steps_rotation=alt_steps_per_rotation)
 az_encoder_motor = EncoderMotor(az_motor, channel_A=15, channel_B=14, P = 100,I=0,D = 1, steps_rotation=az_steps_per_rotation)
-telescope = Telescope(alt_encoder_motor, az_encoder_motor, alt_steps_per_degree=alt_steps_per_rotation/360, az_steps_per_degree=az_steps_per_rotation/360)
+telescope = Telescope(alt_encoder_motor, az_encoder_motor)
 
 # Start the GUI
 app = App(telescope, focus_motor, 21)

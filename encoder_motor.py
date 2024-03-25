@@ -34,6 +34,9 @@ class EncoderMotor:
         # Create an encoder object and associate it with the provided GPIO pins.
         self.decoder = rotary_encoder.decoder(self.pi, channel_A, channel_B, self.encoder_callback)
 
+    def set_steps_rotation(self, steps_rotation: int):
+        self.steps_rotation = steps_rotation
+        
     def encoder_callback(self, way):
         self.current_position -= way
 
