@@ -48,12 +48,12 @@ class EncoderMotor:
 
     def control_loop(self):
         error = self.get_current_error()
+        print(self.steps_rotation)
         self.integral += error
         derivative = error - self.previous_error
         
         motor_command = (error * self.P) + (self.integral * self.I) + (derivative * self.D)
         motor_command = min(max(-2000, motor_command), 2000)
-        print(self.current_position)
         
         if motor_command > 0:
             

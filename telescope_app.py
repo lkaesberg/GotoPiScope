@@ -1,6 +1,6 @@
 import time
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from ttkthemes import ThemedTk
 import requests
 import threading
@@ -71,6 +71,29 @@ class App(ThemedTk):
 
         self.sync_button = ttk.Button(self, text="Sync with Stellarium", command=self.update)
         self.sync_button.grid(row=4, column=2, padx=5, pady=5)
+        
+        # Steps modifier
+        self.modifier_frame = ttk.Frame(self)
+        self.modifier_frame.grid(row=7, column=0, columnspan=2, padx=10, pady=10)
+        
+        self.alt_modifier_label = ttk.Label(self.modifier_frame, text="Alt Modifier:")
+        self.alt_modifier_label.grid(row=0, column=0, padx=5, pady=5)
+        
+        self.alt_modifier_var = tk.StringVar()
+        self.alt_modifier = ttk.Entry(self.modifier_frame, textvariable= self.alt_modifier_var)
+        self.alt_modifier.grid(row=0, column=1, columnspan=3, padx=0, pady=5)
+        self.alt_modifier.bind("<Return>", lambda _ : self.save_steps_value("alt"))
+        self.read_steps_value("alt")
+        
+        self.az_modifier_label = ttk.Label(self.modifier_frame, text="Az Modifier:")
+        self.az_modifier_label.grid(row=1, column=0, padx=5, pady=5)
+        
+        self.az_modifier_var = tk.StringVar()
+        self.az_modifier = ttk.Entry(self.modifier_frame, textvariable=self.az_modifier_var)
+        self.az_modifier.grid(row=1, column=1, columnspan=3, padx=0, pady=5)
+        self.az_modifier.bind("<Return>", lambda _ : self.save_steps_value("az"))
+        self.read_steps_value("az")
+        
 
         # Control Buttons
         self.control_frame = ttk.Frame(self)
@@ -170,6 +193,36 @@ class App(ThemedTk):
     def on_closing(self):
         self.telescope.cleanup()
         self.destroy()
+    
+    def save_steps_value(self, mode:str):
+        try:
+            if mode == "alt":
+                float_val = float(self.alt_modifier.get())
+                self.telescope.alt_motor.set_steps_rotation(alt_steps_per_rotation * float_val)
+            elif mode == "az":
+                float_val = float(self.az_modifier.get())
+                self.telescope.az_motor.set_steps_rotation(az_steps_per_rotation * float_val)
+            # Convert the text field content to float
+            
+            # Save the float value to a file
+            with open(f"{mode}.conf", "w") as file:
+                file.write(f"{float_val}")
+        except ValueError:
+            # Display an error message if the input is not a valid float
+            messagebox.showerror("Invalid Input", "Please enter a valid float value.")
+    
+    def read_steps_value(self, mode:str) -> float:
+        try:
+            with open(f"{mode}.conf", 'r') as file:
+                float_val = float(file.read().strip())
+        except:
+            float_val = 1.0
+        if mode == "alt":
+            self.alt_modifier_var.set(float_val)
+        elif mode == "az":
+            self.az_modifier_var.set(float_val)
+        self.save_steps_value(mode)
+
 
 alt_motor = StepperMotor(step_pin=13, dir_pin=25, en_pin=8)
 az_motor = StepperMotor(step_pin=12, dir_pin=20, en_pin=16)
